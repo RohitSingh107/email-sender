@@ -76,6 +76,7 @@ executable email-sender
                     , dotenv
                     , directory
                     , MissingH
+                    , cmdargs
     -- Directories containing source files.
     hs-source-dirs:   exe
 

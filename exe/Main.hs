@@ -15,11 +15,12 @@ import           Network.Mail.Mime           (Address (Address, addressEmail, ad
                                               Mail (Mail, mailBcc, mailCc, mailFrom, mailHeaders, mailParts, mailTo),
                                               addAttachments, plainPart)
 -- import           System.Directory
-import           System.Environment          (getEnv)
+import           System.Environment          (getEnv, getArgs)
 import           System.Exit                 (die)
 import           System.IO                   (BufferMode (BlockBuffering),
                                               IOMode (ReadMode), hClose,
                                               hSetBuffering, openFile)
+import System.Console.CmdArgs (cmdArgs, Data, Typeable)
 
 from :: Address
 from = "rohitsingh.mait@gmail.com"
@@ -104,9 +105,24 @@ processEmail email = do
 emailsToSend :: [String]
 emailsToSend = ["juspay"]
 
+
+data PathArgs  = PathArgs {
+  attdir :: !String,
+  emaildir :: !String
+} deriving (Show, Data, Typeable)
+
+pathArgs :: PathArgs
+pathArgs = PathArgs {
+    attdir = T.unpack attachmentDirectory
+  , emaildir = emailsDirectory
+}
+
 main :: IO ()
 main = do
   loadFile defaultConfig
 
-  mapM_ processEmail emailsToSend
+  args <- cmdArgs pathArgs
+  print args
+
+  -- mapM_ processEmail emailsToSend
   putStrLn "All emails sent successfully!"
