@@ -15,12 +15,13 @@ import           Network.Mail.Mime           (Address (Address, addressEmail, ad
                                               Mail (Mail, mailBcc, mailCc, mailFrom, mailHeaders, mailParts, mailTo),
                                               addAttachments, plainPart)
 -- import           System.Directory
-import           System.Environment          (getEnv, getArgs)
+
+import           System.Console.CmdArgs      (Data, Typeable, cmdArgs)
+import           System.Environment          (getEnv)
 import           System.Exit                 (die)
 import           System.IO                   (BufferMode (BlockBuffering),
                                               IOMode (ReadMode), hClose,
                                               hSetBuffering, openFile)
-import System.Console.CmdArgs (cmdArgs, Data, Typeable)
 
 from :: Address
 from = "rohitsingh.mait@gmail.com"
@@ -34,24 +35,39 @@ username = "rohitsingh.mait@gmail.com"
 authType :: AuthType
 authType = LOGIN
 
-emailsDirectory :: String
-emailsDirectory = "/home/rohits/mydata/code/git_repos/email-sender/emails/"
+--
+-- emailsDirectory :: String
+-- emailsDirectory = "/home/rohits/mydata/code/git_repos/email-sender/emails/"
+--
+-- attachmentDirectory :: T.Text
+-- attachmentDirectory = "/home/rohits/mydata/code/git_repos/email-sender/attachments/"
 
-attachmentDirectory :: T.Text
-attachmentDirectory = "/home/rohits/mydata/code/git_repos/email-sender/attachments/"
+
+data PathArgs = PathArgs
+  { attdir   :: !String,
+    emaildir :: !String
+  }
+  deriving (Show, Data, Typeable)
+
+pathArgs :: PathArgs
+pathArgs =
+  PathArgs
+    { emaildir = "/home/rohits/mydata/code/git_repos/email-sender/emails",
+      attdir = "/home/rohits/mydata/code/git_repos/email-sender/attachments"
+    }
 
 formatAddress :: T.Text -> Address
 formatAddress s = Address {addressEmail = s, addressName = Nothing}
 
-formatAttachment :: T.Text -> (T.Text, FilePath)
-formatAttachment file = (mimeType, path)
+formatAttachment :: PathArgs -> T.Text -> (T.Text, FilePath)
+formatAttachment args file = (mimeType, path)
   where
     mimeType :: T.Text
     mimeType = case guessType defaultmtd False (T.unpack file) of
       (Nothing, _) -> "text/plain" -- If unknown assuming it's plain text
       (Just t, _)  -> T.pack t
     path :: FilePath
-    path = T.unpack $ attachmentDirectory <> file
+    path = attdir args <> "/" <> T.unpack file
 
 sendEmail :: [Address] -> T.Text -> LT.Text -> [(T.Text, FilePath)] -> IO ()
 sendEmail to subject body attachments = do
@@ -77,9 +93,9 @@ sendEmail to subject body attachments = do
 
   closeSMTP conn
 
-processEmail :: String -> IO ()
-processEmail email = do
-  fh <- openFile (emailsDirectory <> email <> ".txt") ReadMode
+processEmail :: PathArgs -> String -> IO ()
+processEmail args email = do
+  fh <- openFile (emaildir args <> "/" <> email <> ".txt") ReadMode
   hSetBuffering fh (BlockBuffering Nothing)
 
   addressLine <- hGetLine fh
@@ -87,7 +103,7 @@ processEmail email = do
   -- putStrLn $ "Address: " <> address
 
   attachmentsName <- hGetLine fh
-  let attachments = map formatAttachment $ T.words attachmentsName
+  let attachments = map (formatAttachment args) $ T.words attachmentsName
   -- putStrLn $ "Attachment path: " <> attachmentsName
 
   subject <- hGetLine fh
@@ -106,23 +122,12 @@ emailsToSend :: [String]
 emailsToSend = ["juspay"]
 
 
-data PathArgs  = PathArgs {
-  attdir :: !String,
-  emaildir :: !String
-} deriving (Show, Data, Typeable)
-
-pathArgs :: PathArgs
-pathArgs = PathArgs {
-    attdir = T.unpack attachmentDirectory
-  , emaildir = emailsDirectory
-}
-
 main :: IO ()
 main = do
   loadFile defaultConfig
 
   args <- cmdArgs pathArgs
-  print args
+  -- print args
 
-  -- mapM_ processEmail emailsToSend
+  mapM_ (processEmail args) emailsToSend
   putStrLn "All emails sent successfully!"
