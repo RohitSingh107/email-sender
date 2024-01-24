@@ -119,7 +119,8 @@ processEmail args email = do
 -- print $ "Email: " <> email <> " sent."
 
 emailsToSend :: [String]
-emailsToSend = ["juspay"]
+-- emailsToSend = ["juspay", "circuithub"]
+emailsToSend = ["circuithub"]
 
 
 main :: IO ()
