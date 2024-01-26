@@ -1,0 +1,10 @@
+[Unit]
+Description=Weather report service
+
+[Timer]
+OnBootSec=15min
+OnCalendar=Mon..Fri 20:29
+Persistent=true
+
+[Install]
+WantedBy=timers.target

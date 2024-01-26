@@ -1,0 +1,8 @@
+[Unit]
+Description=Notify Weather Report Service
+
+[Service]
+ExecStart=/bin/sh -c '/home/rohits/mydata/tmp/crontest.py'
+
+[Install]
+WantedBy=default.target
