@@ -23,6 +23,11 @@ import           System.IO                   (BufferMode (BlockBuffering),
                                               IOMode (ReadMode), hClose,
                                               hSetBuffering, openFile)
 
+import Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString.Lazy.Char8 as C
+import EmailDataSerializer (decodeTopLevel, EmailData (toEmailData, subjectEmailData, ccEmailData, bccEmailData, bodyEmailData, attachmentsEmailData))
+import Data.Maybe (fromMaybe)
+
 from :: Address
 from = "rohitsingh.mait@gmail.com"
 
@@ -45,7 +50,8 @@ authType = LOGIN
 
 data PathArgs = PathArgs
   { attdir   :: !String,
-    emaildir :: !String
+    emaildir :: !String,
+    j :: String
   }
   deriving (Show, Data, Typeable)
 
@@ -53,7 +59,8 @@ pathArgs :: PathArgs
 pathArgs =
   PathArgs
     { emaildir = "/home/rohits/mydata/code/git_repos/email-sender/emails",
-      attdir = "/home/rohits/mydata/code/git_repos/email-sender/attachments"
+      attdir = "/home/rohits/mydata/code/git_repos/email-sender/attachments",
+      j = ""
     }
 
 formatAddress :: T.Text -> Address
@@ -69,15 +76,15 @@ formatAttachment args file = (mimeType, path)
     path :: FilePath
     path = attdir args <> "/" <> T.unpack file
 
-sendEmail :: [Address] -> T.Text -> LT.Text -> [(T.Text, FilePath)] -> IO ()
-sendEmail to subject body attachments = do
+sendEmail :: [Address] -> [Address] -> [Address] -> T.Text -> LT.Text -> [(T.Text, FilePath)] -> IO ()
+sendEmail to cc bcc subject body attachments = do
   password <- getEnv "PASS"
   let newMail =
         Mail
           { mailFrom = from,
             mailTo = to,
-            mailCc = [],
-            mailBcc = [from],
+            mailCc = cc,
+            mailBcc = bcc,
             mailHeaders = [("Subject", subject)],
             mailParts = [[plainPart body]]
           }
@@ -112,15 +119,32 @@ processEmail args email = do
   content <- hGetContents fh
   -- print content
 
-  sendEmail addresses subject (toLazyText $ fromText content) attachments
+  sendEmail addresses [] [from] subject (toLazyText $ fromText content) attachments
 
   hClose fh
 
 -- print $ "Email: " <> email <> " sent."
 
 emailsToSend :: [String]
--- emailsToSend = ["juspay", "circuithub"]
-emailsToSend = ["circuithub"]
+emailsToSend = ["juspay", "circuithub"]
+
+
+
+
+
+processEmailFromJson :: ByteString -> IO ()
+processEmailFromJson emailJson = case decodeTopLevel emailJson of
+  Just email -> do
+    let to = toEmailData email
+    let subject = subjectEmailData email 
+    let cc = ccEmailData email
+    let bcc = bccEmailData email
+    let body = bodyEmailData email
+    let attachments = attachmentsEmailData email
+    sendEmail (fromMaybe [] to) (fromMaybe [] cc) (fromMaybe [] bcc) (fromMaybe "" subject) (fromMaybe "" body) (fromMaybe [] attachments)
+    -- print email
+
+  Nothing -> putStrLn "Not a valid email"
 
 
 main :: IO ()
@@ -130,5 +154,9 @@ main = do
   args <- cmdArgs pathArgs
   -- print args
 
-  mapM_ (processEmail args) emailsToSend
-  putStrLn "All emails sent successfully!"
+  -- mapM_ (processEmail args) emailsToSend
+  -- putStrLn "All emails sent successfully!"
+
+  processEmailFromJson $ C.pack $ j args
+
+  

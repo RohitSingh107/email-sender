@@ -1,0 +1,8 @@
+{
+  "to": "email of recepeint",
+  "subject": "subject of email",
+  "cc": ["cc1", "..."],
+  "bcc": ["bcc1", "..."],
+  "body": "body of email",
+  "attachments": ["path1", "..."]
+}
